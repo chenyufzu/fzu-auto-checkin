@@ -35,17 +35,10 @@ def _save_token(cfg, token: str):
 def main():
     cfg = load_config()
 
-    # GitHub 定时档实测常被延迟 1-4 小时（晚间档可能整批拖到凌晨）：
-    # 窗口外到达的运行一律静默跳过（不登录、不推送）；
-    # 卡在窗口边缘（21:30-21:34）的运行等满 21:35 再签，避开服务器刚开窗的边界
+        # 按北京时间，仅在21:00至23:59执行
     now = beijing_now()
-    if datetime.time(21, 30) <= now.time() < datetime.time(21, 35):
-        wait = (datetime.datetime.combine(now.date(), datetime.time(21, 35)) - now).total_seconds()
-        print(f"当前北京时间 {now:%H:%M}，等待 {int(wait) + 1} 秒到 21:35 再执行")
-        time.sleep(max(wait, 0) + 1)
-        now = beijing_now()
-    if not (datetime.time(21, 35) <= now.time() <= datetime.time(23, 59, 59)):
-        print(f"北京时间 {now:%H:%M} 不在晚点名窗口（21:35-23:59），判定为延迟触发的补跑，静默跳过。")
+    if not (datetime.time(21, 0) <= now.time() <= datetime.time(23, 59, 59)):
+        print(f"北京时间 {now:%H:%M} 不在晚点名窗口（21:00-23:59），跳过。")
         return
 
     # 假期自动跳过：命中校历/自定义区间时什么都不做（默认静默）
