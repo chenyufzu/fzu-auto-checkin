@@ -84,7 +84,14 @@ def login(username: str, password: str) -> str:
         if token:
             return token
 
-    # 失败：尝试从返回页面提取错误信息
-    err = re.search(r'id="login-error-msg"[^>]*>([^<]+)', r2.text)
-    hint = err.group(1).strip() if err else "未知错误（可能需要验证码或页面结构变化）"
-    raise RuntimeError(f"SSO 登录失败: {hint}")
+    from urllib.parse import urlsplit
+    error_code = ""
+    for field in ("login-error-code", "login-error-msg"):
+        match = re.search(rf'id="{field}"[^>]*>\s*(\d+)\s*<', r2.text)
+        if match:
+            error_code = match.group(1)
+            break
+    print("登录响应状态码：", r2.status_code)
+    print("响应网站：", urlsplit(r2.url).hostname)
+    print("学校错误码：", error_code or "未提供")
+    raise RuntimeError("SSO 登录失败，请查看上面的诊断信息")
