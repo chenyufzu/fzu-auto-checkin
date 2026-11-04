@@ -35,7 +35,7 @@ def _save_token(cfg, token: str):
 def main():
     cfg = load_config()
 
-        # 按北京时间，仅在21:00至23:59执行
+    # 按北京时间，仅在21:00至23:59执行
     now = beijing_now()
     if not (datetime.time(21, 0) <= now.time() <= datetime.time(23, 59, 59)):
         print(f"北京时间 {now:%H:%M} 不在晚点名窗口（21:00-23:59），跳过。")
