@@ -86,14 +86,34 @@ def login(username: str, password: str) -> str:
         if token:
             return token
 
+    import html
     from urllib.parse import urlsplit
-    error_code = ""
-    for field in ("login-error-code", "login-error-msg"):
-        match = re.search(rf'id="{field}"[^>]*>\s*(\d+)\s*<', r2.text)
-        if match:
-            error_code = match.group(1)
-            break
-    print("登录响应状态码：", r2.status_code)
-    print("响应网站：", urlsplit(r2.url).hostname)
-    print("学校错误码：", error_code or "未提供")
-    raise RuntimeError("SSO 登录失败，请查看上面的诊断信息")
+
+    def clean_text(value):
+        value = html.unescape(re.sub(r"<[^>]+>", " ", value))
+        for secret in (username, password):
+            if secret:
+                value = value.replace(str(secret), "<已隐藏>")
+        value = re.sub(r"(?:ST|TGT)-[A-Za-z0-9._-]+|[A-Za-z0-9_]{24,}", "<长标识已隐藏>", value)
+        return re.sub(r"\s+", " ", value).strip()[:180]
+
+    def page_field(field):
+        match = re.search(rf'id=["\']{field}["\'][^>]*>(.*?)</', r2.text, re.S | re.I)
+        return clean_text(match.group(1)) if match else ""
+
+    title = re.search(r"<title[^>]*>(.*?)</title>", r2.text, re.S | re.I)
+    print("账号仍为模板文字：", username.strip() in {"你的学号", "填写学号"})
+    print("密码仍为模板文字：", password in {"你登录智汇福大的密码", "你当前登录智汇福大的密码", "填写APP密码"})
+    print("页面标题：", clean_text(title.group(1)) if title else "未提供")
+    print("响应状态：", r2.status_code, "；页面长度：", len(r2.text))
+    print("跳转过程（不显示网址参数）：")
+    for reply in [*r2.history, r2]:
+        address = urlsplit(reply.url)
+        path = clean_text(address.path)
+        print(reply.status_code, reply.request.method, address.hostname, path)
+    print("会话Cookie名称：", clean_text(", ".join(sorted({cookie.name for cookie in s.cookies}))))
+    print("学校错误码：", page_field("login-error-code") or "未提供")
+    print("学校错误提示：", page_field("login-error-msg") or "未提供")
+    print("当前认证方式：", page_field("current-login-type") or "未提供")
+    print("页面是否提供验证码地址：", bool(page_field("captcha-url")))
+    raise RuntimeError("尚未取得晚点名登录凭据，请查看上面的诊断信息")
