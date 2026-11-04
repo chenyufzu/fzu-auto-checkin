@@ -68,7 +68,9 @@ def login(username: str, password: str) -> str:
         "execution": execution,
         "croypto": croypto,
         "username": username,
-        "password": _encrypt_password(croypto, password),
+               "password": _encrypt_password(croypto, password),
+        "captcha_code": "",
+        "captcha_payload": _encrypt_password(croypto, "{}"),
     }
     r2 = s.post(
         SSO_BASE,
